@@ -47,27 +47,49 @@ class _WebViewPageState extends State<WebViewPage> {
               return;
             }
 
-            if (webViewController != null) {
-              webViewController!.evaluateJavascript(
-                source:'''
-                  window.app.onHome();
-                ''',
-              ).then((val) {
-                if (val.runtimeType == bool) {
-                  if (val) {
-                    //webViewController?.evaluateJavascript(source:'''alert("1 onHome");''',);
-                    if (context.mounted) {
-                      Navigator.of(context).pop();
-                    }
-                  } else {
-                    //webViewController?.evaluateJavascript(source:'''alert("1 NOT onHome");''',);
-                    webViewController?.evaluateJavascript(source: """            
-                        var keyEvent = new KeyboardEvent("keydown", {key : "GoBack"});
-                        document.dispatchEvent(keyEvent);
-                      """);
-                  }
-                } 
-              });
+            final controller = webViewController;
+            if (controller == null) {
+              if (context.mounted) {
+                Navigator.of(context).pop();
+              }
+              return;
+            }
+
+            if (!_onNodecastOrigin()) {
+              // foreign page (e.g. OIDC login) - use normal browser history
+              if (await controller.canGoBack()) {
+                controller.goBack();
+              } else if (context.mounted) {
+                Navigator.of(context).pop();
+              }
+              return;
+            }
+
+            final val = await controller.evaluateJavascript(
+              source:'''
+                window.app && window.app.onHome();
+              ''',
+            );
+            if (val is bool) {
+              if (val) {
+                //webViewController?.evaluateJavascript(source:'''alert("1 onHome");''',);
+                if (context.mounted) {
+                  Navigator.of(context).pop();
+                }
+              } else {
+                //webViewController?.evaluateJavascript(source:'''alert("1 NOT onHome");''',);
+                controller.evaluateJavascript(source: """
+                    var keyEvent = new KeyboardEvent("keydown", {key : "GoBack"});
+                    document.dispatchEvent(keyEvent);
+                  """);
+              }
+            } else {
+              // nodecast page without the app object (e.g. login.html)
+              if (await controller.canGoBack()) {
+                controller.goBack();
+              } else if (context.mounted) {
+                Navigator.of(context).pop();
+              }
             }
           },
           child:
@@ -154,6 +176,22 @@ class _WebViewPageState extends State<WebViewPage> {
     );
   }
 
+  /// True while the WebView shows a page on the configured nodecast server.
+  /// On foreign origins (e.g. an OIDC identity provider) key events are left
+  /// to the native WebView so its own focus navigation keeps working.
+  bool _onNodecastOrigin() {
+    if (url.isEmpty) {
+      return true;
+    }
+    try {
+      final current = Uri.parse(url);
+      final home    = Uri.parse(widget.uri);
+      return current.host == home.host && current.port == home.port;
+    } catch (_) {
+      return true;
+    }
+  }
+
   KeyEventResult handleKey(KeyEvent event, BuildContext context, InAppWebViewController? controller) {
     if (controller != null) {
       if (event is KeyDownEvent) {
@@ -188,8 +226,8 @@ class _WebViewPageState extends State<WebViewPage> {
           keyName = "GoBack";
         }
         */
-        if (keyName != null) {
-          controller.evaluateJavascript(source: """            
+        if (keyName != null && _onNodecastOrigin()) {
+          controller.evaluateJavascript(source: """
             var keyEvent = new KeyboardEvent("keydown", {key : "$keyName"});
             document.dispatchEvent(keyEvent);
             """);

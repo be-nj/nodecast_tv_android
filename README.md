@@ -92,13 +92,14 @@ Unless and until these nodecast-tv changes are merged into the main branch, you 
 
 1.  Updated nodecast-tv code to [respond to d-pad presses](https://github.com/jackduckworth2/nodecast-tv)
 
-2.  Not done:
-    - Settings (it didn't seem worth the effort, when navigating Settings on a TV would be pretty unpleasant) 
-
-3.   Created simple android app with
-     - login screen allowing you to enter the nodecast-tv url
+2.   Created simple android app with
+     - connection screen allowing you to enter the nodecast-tv url
+     - saved server list - every successfully opened server is remembered; open or delete entries with the remote (left/right switches between __Open__ and __Delete__, OK executes)
+     - settings screen with an auto-connect toggle (reconnects to the last used server on app start) and a way to clear the saved servers
      - single WebView component with browser output
 
-4.  Tips
+3.  Tips
     - hit the __Back__ button if you cant find focus - it should take you back to __Home__
     - hit the __Back__ button when on __Home__ to go back the Connection screen
+
+See [CHANGELOG.md](CHANGELOG.md) for version history.

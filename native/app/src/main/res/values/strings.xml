@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">NodeCast</string>
+    <string name="pair_title">Pair with your phone</string>
+    <string name="pair_subtitle">Point your camera at the code — the remote opens right in your browser.</string>
+    <string name="ready_to_pair">Ready to pair</string>
+    <string name="paired_with">Paired with %1$s</string>
+    <string name="pairing_code">Code %1$s</string>
+    <string name="no_network">No network connection</string>
+    <string name="live">LIVE</string>
+    <string name="playing">Playing</string>
+    <string name="paused">Paused</string>
+    <string name="buffering">Buffering…</string>
+    <string name="playback_error">Playback error (%1$s)</string>
+    <string name="playlist_error">Could not load playlist</string>
+</resources>

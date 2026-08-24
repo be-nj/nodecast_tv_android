@@ -2,6 +2,11 @@
 
 An android app wrapping the [nodecast-tv](https://github.com/technomancer702/nodecast-tv) project.
 
+> **New:** [`native/`](native/) contains **NodeCast**, a new native Kotlin app for
+> Google TV that works like a Chromecast — the TV only plays the stream, and you
+> control everything from your phone's browser after scanning a QR code (no app
+> install on the phone). See [native/README.md](native/README.md).
+
 [nodecast-tv](https://github.com/technomancer702/nodecast-tv) is a web app for viewing IPTV in a browser.
 
 As browser support is limited in Google TV / Android TV, this app is designed to work on a TV, allowing you to navigate the app using a standard TV remote control.

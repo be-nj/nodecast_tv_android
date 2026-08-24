@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0b0d">
+<title>NodeCast Remote</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&display=swap">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    background: #0a0b0d; color: #f2f3f5;
+    display: flex; flex-direction: column;
+    padding-top: env(safe-area-inset-top);
+    user-select: none; -webkit-user-select: none;
+  }
+  button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+  input { font: inherit; color: #f2f3f5; }
+
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 24px 0;
+  }
+  .wordmark { display: flex; align-items: center; gap: 9px; font-size: 14px; font-weight: 500;
+    letter-spacing: .2em; text-transform: uppercase; }
+  .tvchip { display: flex; align-items: center; gap: 8px; border: 1px solid #1e2126;
+    border-radius: 999px; padding: 8px 14px; font-size: 12px; color: #9aa0a8; letter-spacing: .03em; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: #5fd4c4; }
+  .dot.off { background: #e5484d; }
+
+  main { flex: 1 1 auto; overflow-y: auto; display: flex; flex-direction: column; }
+  .view { flex: 1 1 auto; display: none; flex-direction: column; }
+  .view.active { display: flex; }
+
+  /* --- Steuerung --- */
+  #view-remote { justify-content: center; gap: 44px; padding: 24px; }
+  .nowcard {
+    position: relative; height: 200px; border-radius: 24px; overflow: hidden;
+    background: radial-gradient(130% 110% at 70% 20%, #16324a 0%, #0d1b2e 55%, #080c14 100%);
+    box-shadow: 0 0 0 1px rgba(255,255,255,.06);
+  }
+  .nowcard .glow { position: absolute; top: -40px; right: -20px; width: 220px; height: 220px;
+    border-radius: 50%; background: radial-gradient(circle, rgba(95,212,196,.18) 0%, rgba(95,212,196,0) 60%); }
+  .nowcard .stop {
+    position: absolute; top: 14px; right: 14px; width: 44px; height: 44px; border-radius: 50%;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(10,11,13,.45); border: 1px solid rgba(255,255,255,.1);
+  }
+  .nowcard.playing .stop { display: flex; }
+  .nowcard .info {
+    position: absolute; left: 0; right: 0; bottom: 0; padding: 44px 22px 20px;
+    display: flex; flex-direction: column; gap: 5px;
+    background: linear-gradient(to top, rgba(8,12,20,.85) 0%, rgba(8,12,20,0) 100%);
+  }
+  .liverow { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 500;
+    letter-spacing: .16em; color: #b8bdc4; }
+  .livedot { width: 6px; height: 6px; border-radius: 50%; background: #e5484d; }
+  #now-title { font-size: 24px; font-weight: 500; letter-spacing: -.01em; }
+  #now-sub { font-size: 13px; font-weight: 300; color: #9aa0a8; }
+
+  .transport { display: flex; align-items: center; justify-content: center; gap: 34px; }
+  .btn-side { width: 56px; height: 56px; border-radius: 50%; border: 1px solid #1e2126;
+    display: flex; align-items: center; justify-content: center; }
+  .btn-side:active { background: #16181c; }
+  .btn-main { width: 88px; height: 88px; border-radius: 50%; background: #5fd4c4;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 12px 44px rgba(95,212,196,.28); transition: transform .1s; }
+  .btn-main:active { transform: scale(.94); }
+  .btn-main:disabled { opacity: .35; box-shadow: none; }
+
+  .volrow { display: flex; align-items: center; gap: 16px; padding: 0 8px; }
+  input[type=range] { flex: 1; appearance: none; -webkit-appearance: none; height: 3px;
+    border-radius: 2px; background: #1e2126; outline: none; }
+  input[type=range]::-webkit-slider-thumb { appearance: none; -webkit-appearance: none;
+    width: 22px; height: 22px; border-radius: 50%; background: #f2f3f5;
+    box-shadow: 0 2px 8px rgba(0,0,0,.5); }
+
+  /* --- Sender --- */
+  #view-channels { padding: 18px 12px 0; gap: 14px; }
+  .chead { display: flex; align-items: center; gap: 10px; padding: 0 12px; }
+  .chead h1 { font-size: 26px; font-weight: 500; letter-spacing: -.01em; flex: 1; }
+  .iconbtn { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; }
+  .iconbtn:active { background: #16181c; }
+  .searchrow { display: flex; align-items: center; gap: 10px; background: #121418;
+    border-radius: 12px; padding: 0 16px; margin: 0 12px; }
+  .searchrow input { flex: 1; background: none; border: none; outline: none; height: 48px;
+    font-size: 15px; font-weight: 300; }
+  .searchrow input::placeholder { color: #6b717a; }
+  #setup { display: none; flex-direction: column; gap: 10px; margin: 0 12px; padding: 16px;
+    background: #101216; border-radius: 14px; }
+  #setup.open { display: flex; }
+  #setup label { font-size: 12px; color: #9aa0a8; letter-spacing: .04em; }
+  #setup input { background: #0a0b0d; border: 1px solid #1e2126; border-radius: 10px;
+    height: 46px; padding: 0 14px; font-size: 14px; outline: none; width: 100%; }
+  #setup input:focus { border-color: #5fd4c4; }
+  .btn-accent { height: 46px; border-radius: 10px; background: #5fd4c4; color: #07110f;
+    font-weight: 500; font-size: 14px; }
+  .btn-accent:active { opacity: .85; }
+  #channel-list { display: flex; flex-direction: column; padding-bottom: 12px; }
+  .chan { display: flex; align-items: center; gap: 14px; padding: 12px; border-radius: 14px;
+    text-align: left; width: 100%; }
+  .chan:active { background: #121418; }
+  .chan.current { background: rgba(95,212,196,.07); }
+  .chan .num { width: 44px; height: 44px; border-radius: 12px; background: #17191e; flex: none;
+    display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 500;
+    color: #7d838c; overflow: hidden; }
+  .chan.current .num { background: #16324a; color: #9fc3d8; }
+  .chan .num img { width: 100%; height: 100%; object-fit: contain; }
+  .chan .meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .chan .name { font-size: 16px; font-weight: 400; color: #e6e8ea; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; }
+  .chan.current .name { color: #5fd4c4; font-weight: 500; }
+  .chan .grp { font-size: 12px; font-weight: 300; color: #6b717a; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; }
+  .empty { padding: 40px 24px; text-align: center; color: #6b717a; font-size: 14px;
+    font-weight: 300; line-height: 1.5; }
+
+  /* --- Tabs --- */
+  nav { display: flex; border-top: 1px solid #16181c; padding: 10px 24px;
+    padding-bottom: calc(14px + env(safe-area-inset-bottom)); gap: 12px; flex: none; }
+  nav button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;
+    padding: 6px 0; font-size: 11px; color: #6b717a; letter-spacing: .04em; }
+  nav button.active { color: #5fd4c4; font-weight: 500; }
+  nav button svg { stroke: #6b717a; }
+  nav button.active svg { stroke: #5fd4c4; }
+
+  /* --- Pairing --- */
+  #view-pair { justify-content: center; align-items: center; gap: 26px; padding: 24px; text-align: center; }
+  #view-pair h1 { font-size: 24px; font-weight: 500; }
+  #view-pair p { font-size: 14px; color: #9aa0a8; font-weight: 300; max-width: 280px; line-height: 1.5; }
+  #code-input { background: #0a0b0d; border: 1px solid #1e2126; border-radius: 12px; height: 56px;
+    width: 180px; text-align: center; font-size: 26px; letter-spacing: .3em; outline: none; }
+  #code-input:focus { border-color: #5fd4c4; }
+  #pair-btn { width: 180px; }
+  #pair-error { color: #e5484d; font-size: 13px; min-height: 18px; }
+
+  #toast { position: fixed; left: 50%; bottom: 110px; transform: translateX(-50%) translateY(20px);
+    background: #1a1d22; border: 1px solid #23262b; color: #e6e8ea; font-size: 13px;
+    padding: 12px 20px; border-radius: 999px; opacity: 0; pointer-events: none;
+    transition: all .25s; white-space: nowrap; max-width: 90vw; overflow: hidden; text-overflow: ellipsis; }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wordmark">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#5fd4c4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="13" rx="2"/><path d="M8.5 22h7"/></svg>
+    NodeCast
+  </div>
+  <div class="tvchip"><span class="dot off" id="conn-dot"></span><span id="tv-name">Getrennt</span></div>
+</header>
+
+<main>
+  <!-- Pairing -->
+  <section class="view" id="view-pair">
+    <h1>Mit dem TV koppeln</h1>
+    <p>Gib den 4-stelligen Code ein, der unten auf dem TV-Bildschirm steht.</p>
+    <input id="code-input" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="····">
+    <button class="btn-accent" id="pair-btn">Verbinden</button>
+    <div id="pair-error"></div>
+  </section>
+
+  <!-- Steuerung -->
+  <section class="view" id="view-remote">
+    <div class="nowcard" id="nowcard">
+      <div class="glow"></div>
+      <button class="stop" id="btn-stop" aria-label="Stopp">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="#e6e8ea"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+      </button>
+      <div class="info">
+        <div class="liverow" id="liverow" style="visibility:hidden"><span class="livedot"></span><span id="live-label">LIVE</span></div>
+        <div id="now-title">Nichts läuft</div>
+        <div id="now-sub">Wähle einen Sender oder starte eine URL</div>
+      </div>
+    </div>
+    <div class="transport">
+      <button class="btn-side" id="btn-prev" aria-label="Vorheriger Sender">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c8ccd2" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M19 20L9 12l10-8v16z"/><path d="M5 19V5"/></svg>
+      </button>
+      <button class="btn-main" id="btn-play" aria-label="Wiedergabe/Pause">
+        <svg id="ic-play" width="30" height="30" viewBox="0 0 24 24" fill="#07110f" style="display:none"><path d="M8 5v14l11-7L8 5z"/></svg>
+        <svg id="ic-pause" width="30" height="30" viewBox="0 0 24 24" fill="#07110f"><path d="M7 4.5h3.4v15H7zM13.6 4.5H17v15h-3.4z"/></svg>
+      </button>
+      <button class="btn-side" id="btn-next" aria-label="Nächster Sender">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c8ccd2" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4l10 8-10 8V4z"/><path d="M19 5v14"/></svg>
+      </button>
+    </div>
+    <div class="volrow">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6b717a" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/></svg>
+      <input type="range" id="volume" min="0" max="100" value="50" aria-label="Lautstärke">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6b717a" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 010 7"/><path d="M18.4 5.6a9 9 0 010 12.8"/></svg>
+    </div>
+  </section>
+
+  <!-- Sender -->
+  <section class="view" id="view-channels">
+    <div class="chead">
+      <h1>Sender</h1>
+      <button class="iconbtn" id="btn-setup" aria-label="Playlist einrichten">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#9aa0a8" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33h.09A1.65 1.65 0 0010 3.09V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51h.09a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v.09a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      </button>
+    </div>
+    <div id="setup">
+      <label for="playlist-input">M3U-Playlist-URL</label>
+      <input id="playlist-input" type="url" placeholder="https://…/playlist.m3u" autocapitalize="off" autocorrect="off">
+      <button class="btn-accent" id="btn-load-playlist">Playlist laden</button>
+      <label for="url-input" style="margin-top:6px">Oder direkte Stream-URL</label>
+      <input id="url-input" type="url" placeholder="https://…/stream.m3u8" autocapitalize="off" autocorrect="off">
+      <button class="btn-accent" id="btn-play-url">Auf TV abspielen</button>
+    </div>
+    <div class="searchrow">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#6b717a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input id="search" type="search" placeholder="Sender suchen" autocapitalize="off">
+    </div>
+    <div id="channel-list"></div>
+  </section>
+</main>
+
+<nav id="tabs" style="display:none">
+  <button data-view="view-remote" class="active">
+    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18.5h2"/></svg>
+    Steuerung
+  </button>
+  <button data-view="view-channels">
+    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h10"/></svg>
+    Sender
+  </button>
+</nav>
+
+<div id="toast"></div>
+
+<script>
+(() => {
+  'use strict';
+
+  const $ = (id) => document.getElementById(id);
+  const state = {
+    ws: null, connected: false, authorized: false,
+    status: { state: 'idle', channel: '', group: '', live: false, volume: 0.5 },
+    channels: [], playlistUrl: '',
+    retryDelay: 1000, volumeDragging: false, searchTerm: '',
+  };
+
+  // --- pairing credentials ---
+  const params = new URLSearchParams(location.search);
+  if (params.get('t')) {
+    localStorage.setItem('nodecast_token', params.get('t'));
+    history.replaceState(null, '', location.pathname);
+  }
+  const getToken = () => localStorage.getItem('nodecast_token') || '';
+  let manualCode = '';
+
+  const deviceName = (() => {
+    const ua = navigator.userAgent;
+    if (/iPhone/.test(ua)) return 'iPhone';
+    if (/iPad/.test(ua)) return 'iPad';
+    if (/Android/.test(ua)) return 'Android-Handy';
+    return 'Browser';
+  })();
+
+  // --- views ---
+  function showView(id) {
+    document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === id));
+    document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.view === id));
+    $('tabs').style.display = id === 'view-pair' ? 'none' : 'flex';
+  }
+
+  document.querySelectorAll('nav button').forEach(b =>
+    b.addEventListener('click', () => showView(b.dataset.view)));
+
+  // --- websocket ---
+  function connect() {
+    if (state.ws && (state.ws.readyState === 0 || state.ws.readyState === 1)) return;
+    const ws = new WebSocket('ws://' + location.host + '/');
+    state.ws = ws;
+
+    ws.onopen = () => {
+      state.connected = true;
+      const hello = { type: 'hello', name: deviceName };
+      if (getToken()) hello.token = getToken();
+      else if (manualCode) hello.code = manualCode;
+      else { showView('view-pair'); ws.close(); return; }
+      ws.send(JSON.stringify(hello));
+    };
+
+    ws.onmessage = (ev) => {
+      let msg; try { msg = JSON.parse(ev.data); } catch { return; }
+      handle(msg);
+    };
+
+    ws.onclose = () => {
+      state.connected = false; state.authorized = false;
+      renderConnection();
+      setTimeout(connect, state.retryDelay);
+      state.retryDelay = Math.min(state.retryDelay * 1.6, 10000);
+    };
+    ws.onerror = () => ws.close();
+  }
+
+  function send(obj) {
+    if (state.ws && state.ws.readyState === 1 && state.authorized) {
+      state.ws.send(JSON.stringify(obj));
+    }
+  }
+
+  function handle(msg) {
+    switch (msg.type) {
+      case 'welcome':
+        state.authorized = true;
+        state.retryDelay = 1000;
+        if (msg.token) localStorage.setItem('nodecast_token', msg.token);
+        $('tv-name').textContent = msg.device || 'TV';
+        if (msg.status) { state.status = msg.status; }
+        if (msg.channels) { state.channels = msg.channels; }
+        state.playlistUrl = msg.playlistUrl || '';
+        $('pair-error').textContent = '';
+        showView('view-remote');
+        renderAll();
+        break;
+      case 'status':
+        state.status = msg;
+        renderStatus();
+        renderChannels();
+        break;
+      case 'channels':
+        state.channels = msg.channels || [];
+        state.playlistUrl = msg.playlistUrl || '';
+        renderChannels();
+        break;
+      case 'toast':
+        toast(msg.message);
+        break;
+      case 'error':
+        if (msg.error === 'bad_code' || msg.error === 'rate_limited') {
+          localStorage.removeItem('nodecast_token');
+          manualCode = '';
+          $('pair-error').textContent = msg.error === 'rate_limited'
+            ? 'Zu viele Versuche — kurz warten.' : 'Falscher Code.';
+          showView('view-pair');
+        }
+        break;
+    }
+  }
+
+  // --- rendering ---
+  function renderConnection() {
+    $('conn-dot').classList.toggle('off', !state.authorized);
+    if (!state.authorized) $('tv-name').textContent = 'Getrennt';
+  }
+
+  function renderStatus() {
+    renderConnection();
+    const s = state.status;
+    const playing = s.state === 'playing' || s.state === 'buffering';
+    const hasMedia = s.state !== 'idle' && s.channel;
+    $('nowcard').classList.toggle('playing', !!hasMedia);
+    $('now-title').textContent = hasMedia ? s.channel : 'Nichts läuft';
+    $('now-sub').textContent = hasMedia
+      ? (s.state === 'buffering' ? 'Lädt…' : s.state === 'paused' ? 'Pausiert'
+        : s.state === 'error' ? 'Wiedergabefehler' : (s.group || 'Wird abgespielt'))
+      : 'Wähle einen Sender oder starte eine URL';
+    $('liverow').style.visibility = s.live ? 'visible' : 'hidden';
+    $('ic-play').style.display = playing ? 'none' : 'block';
+    $('ic-pause').style.display = playing ? 'block' : 'none';
+    $('btn-play').disabled = !hasMedia;
+    if (!state.volumeDragging && typeof s.volume === 'number') {
+      $('volume').value = Math.round(s.volume * 100);
+    }
+  }
+
+  function renderChannels() {
+    const list = $('channel-list');
+    const term = state.searchTerm.toLowerCase();
+    const filtered = term
+      ? state.channels.filter(c => (c.name + ' ' + c.group).toLowerCase().includes(term))
+      : state.channels;
+    if (!state.channels.length) {
+      list.innerHTML = '<div class="empty">Noch keine Sender.<br>Lade oben über das Zahnrad eine M3U-Playlist.</div>';
+      $('setup').classList.add('open');
+      return;
+    }
+    const frag = document.createDocumentFragment();
+    filtered.slice(0, 500).forEach((c) => {
+      const idx = state.channels.indexOf(c);
+      const btn = document.createElement('button');
+      btn.className = 'chan' + (c.url === state.status.url || c.name === state.status.channel ? ' current' : '');
+      const num = document.createElement('span');
+      num.className = 'num';
+      if (c.logo) {
+        const img = document.createElement('img');
+        img.src = c.logo; img.loading = 'lazy'; img.alt = '';
+        img.onerror = () => { img.remove(); num.textContent = idx + 1; };
+        num.appendChild(img);
+      } else {
+        num.textContent = idx + 1;
+      }
+      const meta = document.createElement('span');
+      meta.className = 'meta';
+      const name = document.createElement('span');
+      name.className = 'name'; name.textContent = c.name;
+      meta.appendChild(name);
+      if (c.group) {
+        const grp = document.createElement('span');
+        grp.className = 'grp'; grp.textContent = c.group;
+        meta.appendChild(grp);
+      }
+      btn.appendChild(num); btn.appendChild(meta);
+      btn.addEventListener('click', () => playChannel(c));
+      frag.appendChild(btn);
+    });
+    list.innerHTML = '';
+    list.appendChild(frag);
+    if (state.playlistUrl) $('playlist-input').value = state.playlistUrl;
+  }
+
+  function renderAll() { renderStatus(); renderChannels(); }
+
+  // --- actions ---
+  function playChannel(c) {
+    send({ type: 'play', url: c.url, name: c.name, group: c.group });
+    showView('view-remote');
+    toast(c.name);
+  }
+
+  function step(dir) {
+    if (!state.channels.length) return;
+    const cur = state.channels.findIndex(c => c.name === state.status.channel);
+    const next = cur < 0 ? 0 : (cur + dir + state.channels.length) % state.channels.length;
+    playChannel(state.channels[next]);
+  }
+
+  $('btn-play').addEventListener('click', () => send({ type: 'toggle' }));
+  $('btn-stop').addEventListener('click', () => send({ type: 'stop' }));
+  $('btn-prev').addEventListener('click', () => step(-1));
+  $('btn-next').addEventListener('click', () => step(1));
+
+  let volTimer = null;
+  const vol = $('volume');
+  vol.addEventListener('input', () => {
+    state.volumeDragging = true;
+    clearTimeout(volTimer);
+    volTimer = setTimeout(() => {
+      send({ type: 'volume', value: vol.value / 100 });
+      state.volumeDragging = false;
+    }, 120);
+  });
+
+  $('btn-setup').addEventListener('click', () => $('setup').classList.toggle('open'));
+  $('btn-load-playlist').addEventListener('click', () => {
+    const url = $('playlist-input').value.trim();
+    if (!url) return;
+    send({ type: 'set_playlist', url });
+    toast('Playlist wird geladen…');
+  });
+  $('btn-play-url').addEventListener('click', () => {
+    const url = $('url-input').value.trim();
+    if (!url) return;
+    send({ type: 'play', url, name: url.split('/').pop() || url, group: '' });
+    showView('view-remote');
+  });
+
+  $('search').addEventListener('input', (e) => {
+    state.searchTerm = e.target.value;
+    renderChannels();
+  });
+
+  $('pair-btn').addEventListener('click', () => {
+    const code = $('code-input').value.trim();
+    if (code.length !== 4) { $('pair-error').textContent = 'Bitte 4 Ziffern eingeben.'; return; }
+    manualCode = code;
+    $('pair-error').textContent = '';
+    if (state.ws) state.ws.close(); else connect();
+  });
+
+  let toastTimer = null;
+  function toast(text) {
+    const t = $('toast');
+    t.textContent = text;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      state.retryDelay = 1000;
+      connect();
+      send({ type: 'get_state' });
+    }
+  });
+
+  // --- boot ---
+  if (getToken()) { connect(); showView('view-remote'); }
+  else { showView('view-pair'); }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="pair_title">Mit dem Handy koppeln</string>
+    <string name="pair_subtitle">Richte die Kamera auf den Code — die Fernbedienung öffnet sich direkt im Browser.</string>
+    <string name="ready_to_pair">Bereit zum Koppeln</string>
+    <string name="paired_with">Gekoppelt mit %1$s</string>
+    <string name="pairing_code">Code %1$s</string>
+    <string name="no_network">Keine Netzwerkverbindung</string>
+    <string name="playing">Wird abgespielt</string>
+    <string name="paused">Pausiert</string>
+    <string name="buffering">Lädt…</string>
+    <string name="playback_error">Wiedergabefehler (%1$s)</string>
+    <string name="playlist_error">Playlist konnte nicht geladen werden</string>
+</resources>
